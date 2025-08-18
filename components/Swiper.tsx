@@ -102,7 +102,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
 
   // Kitoblar sonini loop uchun ko'paytiramiz
   const duplicatedBooks = filteredBooks.length > 0 
-    ? [...filteredBooks, ...filteredBooks, ...filteredBooks]
+    ? [...filteredBooks]
     : []
 
   const handleCardClick = (bookId: string) => {
@@ -175,23 +175,23 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                 spaceBetween: 16,
               },
               640: {
-                slidesPerView: 1.5,
+                slidesPerView: 1.8,
                 spaceBetween: 20,
               },
               768: {
-                slidesPerView: 2.5,
+                slidesPerView: 2.8,
                 spaceBetween: 20,
               },
               1024: {
-                slidesPerView: 3.5,
+                slidesPerView: 3.8,
                 spaceBetween: 24,
               },
               1280: {
-                slidesPerView: 3.5,
+                slidesPerView: 3.8,
                 spaceBetween: 24,
               },
               1536: {
-                slidesPerView: 3.5,
+                slidesPerView: 3.8,
                 spaceBetween: 28,
               }
             }}
@@ -210,15 +210,15 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, ease: "easeInOut", delay: index * 0.1 }}
-                        className="h-full"
+                        className="h-[80%]"
                       >
                         <Card
                           onClick={() => isTokenyes(() => handleCardClick(book.Book.id))}
                           className="group transition-all duration-500 border border-[#21466D]/10 rounded-2xl cursor-pointer hover:border-[#21466D]/30 h-full flex flex-col justify-between hover:scale-[1.03] transform bg-white/80 backdrop-blur-sm hover:bg-white overflow-hidden"
                         >
                           <CardContent className="p-5 flex-grow flex flex-col max-sm:p-4 max-xs:p-3">
-                            <div className="relative mb-5 overflow-hidden rounded-xl transition-all duration-500 bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg">
-                              <div className="aspect-[3/4] w-full relative">
+                            <div className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500 bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg">
+                              <div className="aspect-[3.2/4] w-full relative">
                                 <Image
                                   src={
                                     getFullImageUrl(book.Book.image?.url) ||
@@ -228,7 +228,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                                   fill
                                   className="object-cover transition-transform duration-500 group-hover:scale-110"
                                   loading="lazy"
-                                  sizes="(max-width: 480px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                                  sizes="(max-width: 480px) 80vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                               </div>
@@ -239,11 +239,11 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                               )}
                             </div>
                             
-                            <div className="flex-grow flex flex-col justify-between">
+                            <div className="flex-grow flex flex-col justify-between px-1 pt-2">
                               <div>
                                 <h3
                                   title={book.Book.name}
-                                  className="font-bold text-lg mb-3 group-hover:text-[#21466D] transition-colors line-clamp-2 text-gray-800 leading-tight max-sm:text-base max-xs:text-sm"
+                                  className="font-bold text-lg mb-1 group-hover:text-[#21466D] transition-colors line-clamp-2 text-gray-800 leading-tight max-sm:text-base max-xs:text-sm"
                                 >
                                   {book.Book.name
                                     .split(/[:\s]+/)
@@ -252,7 +252,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                                   {book.Book.name.split(/[:\s]+/).length > 4 ? "..." : ""}
                                 </h3>
                                 
-                                <div className="space-y-2 text-sm text-gray-600 mb-4 max-xs:text-xs">
+                                <div className="space-y-1 text-sm text-gray-600 mb-4 max-xs:text-xs">
                                   <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-[#21466D] rounded-full"></div>
                                     <span className="font-medium">{book.Book.page} {t("common.page")}</span>
@@ -272,7 +272,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                             </div>
                           </CardContent>
                           
-                          <CardFooter className="p-5 pt-0 max-sm:p-4 max-xs:p-3">
+                          <CardFooter className="p-5 -pt-5 -mt-8 max-sm:p-4 max-xs:p-3">
                             <MagnetButton className="w-full">
                               <Button
                                 className="w-full bg-gradient-to-r from-[#21466D] to-[#4A90E2] text-white hover:from-white hover:to-white font-bold border-0 hover:border-2 hover:border-[#21466D] hover:text-[#21466D] flex items-center justify-center gap-2 transition-all duration-500 rounded-xl shadow-lg hover:shadow-xl max-sm:text-sm max-xs:text-xs max-xs:py-2 h-12 max-xs:h-10"

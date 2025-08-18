@@ -472,7 +472,7 @@ export default function HomePage() {
                       </div>
                       <h3
                         title={book.name}
-                        className="font-semibold text-lg mb-2 group-hover:text-[#21466D] transition-colors line-clamp-2 min-h-[3.5rem]"
+                        className="font-semibold text-lg mb-1 group-hover:text-[#21466D] transition-colors line-clamp-2 min-h-[2rem]"
                       >
                         {book.name
                           .split(/[:\s]+/)
@@ -495,7 +495,7 @@ export default function HomePage() {
                     <CardFooter className="p-4 pt-0 flex flex-col gap-2 max-md:gap-1 max-md:p-2">
                       <MagnetButton className="w-full">
                         <Button
-                          className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white flex items-center justify-center gap-2"
+                          className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white flex items-center justify-center gap-1"
                           onClick={(e) => {
                             e.stopPropagation()
                             isTokenyes(() => addToCart(book))
