@@ -9,7 +9,7 @@ const withPWA = nextPWA({
 })
 
 const nextConfig = {
-  output: 'export', 
+  output: 'standalone', 
   reactStrictMode: true,
   eslint: {
     ignoreDuringBuilds: true,

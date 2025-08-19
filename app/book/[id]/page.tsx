@@ -1,4 +1,5 @@
 "use client"
+export const dynamicParams = true; // ✅ bu yerda bo‘lishi kerak
 
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -28,6 +29,7 @@ import { getBookItems } from "@/lib/api"
 import { getFullImageUrl } from "@/lib/utils"
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery"
 import { useTranslation } from "react-i18next"
+import Link from "next/link"
 
 // Define the EnrichedBook interface to match the new data structure
 interface EnrichedBook {
@@ -96,6 +98,7 @@ interface EnrichedBook {
 }
 
 export default function BookDetailPageClient() {
+  
   const { t, i18n } = useTranslation()
   const params = useParams()
   const router = useRouter()
@@ -372,10 +375,13 @@ export default function BookDetailPageClient() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Back Button */}
-      <Button variant="ghost" onClick={() => router.back()} className="mb-6 bg-[#21466D] hover:bg-[#21466D]/10 text-[white]">
+      <Link href='/'>
+      
+      <Button variant="ghost" className="mb-6 bg-[#21466D] hover:bg-[#21466D]/10 text-[white]">
         <ArrowLeft className="h-4 w-4 mr-2" />
         {t("common.back")}
       </Button>
+      </Link>
 
       <div className="grid grid-cols-3 max-lg:grid-cols-2 max-md:grid-cols-1 gap-8">
         {/* Book Image */}
@@ -444,7 +450,7 @@ export default function BookDetailPageClient() {
         {/* Book Details */}
         <div className="lg:col-span-2 gap-5 flex justify-between items-center flex-col w-full">
           {/* Main Info */}
-          <Card className="border-[#21466D]/10">
+          <Card className="border-[#21466D]/10 w-full">
             <CardHeader>
               <CardTitle className="text-2xl md:text-3xl text-[#21466D]">{book.name}</CardTitle>
               <div className="flex flex-wrap gap-2">

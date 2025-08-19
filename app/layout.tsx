@@ -41,6 +41,7 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="/light-logo.png" />
         <meta name="theme-color" content="#21466D" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes"></meta>
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="USAT Kutubxonasi" />
         <link rel="apple-touch-icon" href="/light-logo.png" />

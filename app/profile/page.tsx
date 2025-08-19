@@ -207,7 +207,7 @@ export default function ProfilePage() {
         // If no orders, try to load from localStorage (fallback) or set to empty
         setProfile((prev) => ({
           ...prev,
-          fullname: localStorage.getItem("full_name") || "",
+          fullname: localStorage.getItem("fullname") || "",
           phone: localStorage.getItem("phone") || "",
         }))
       }

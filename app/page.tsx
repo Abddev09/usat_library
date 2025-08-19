@@ -202,7 +202,7 @@ export default function HomePage() {
   const [showNetworkError, setShowNetworkError] = useState(false)
   const [networkError, setNetworkError] = useState(false)
 
-  const itemsPerPage = 4
+  const itemsPerPage = 20
 
   // Effect to determine if welcome screen should show (once per browser session)
   useEffect(() => {
