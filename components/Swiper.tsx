@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Swiper, SwiperSlide } from "swiper/react"
-import { Autoplay, Navigation, Pagination } from "swiper/modules"
-import { Info, ChevronLeft, ChevronRight } from "lucide-react"
+import { Autoplay, Pagination } from "swiper/modules"
+import { Info } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery"
@@ -20,7 +20,7 @@ import "swiper/css/navigation"
 import "swiper/css/pagination"
 
 // Shadcn/ui komponentlarini import qilamiz
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import MagnetButton from "./Magnet"
@@ -31,10 +31,10 @@ interface SwipperProps {
 
 // Swiper uchun skeleton komponenti
 const SwiperCardSkeleton = () => (
-  <Card className="group hover:shadow-xl transition-all duration-300 border border-[#21466D]/10 rounded-2xl h-full flex flex-col justify-between animate-pulse overflow-hidden">
+  <Card className="group hover:shadow-xl transition-all duration-300 border border-[#21466D]/10 rounded-2xl h-[520px] flex flex-col justify-between animate-pulse overflow-hidden">
     <CardContent className="p-5 flex-grow flex flex-col max-sm:p-4 max-xs:p-3">
       <div className="relative mb-5 overflow-hidden rounded-xl bg-gradient-to-br from-gray-200 to-gray-300">
-        <div className="w-full aspect-[3/4] bg-gray-200 rounded-xl"></div>
+        <div className="w-full h-[300px] bg-gray-200 rounded-xl"></div>
       </div>
       <div className="space-y-3">
         <div className="h-5 bg-gray-200 rounded-lg mb-3"></div>
@@ -46,9 +46,6 @@ const SwiperCardSkeleton = () => (
         </div>
       </div>
     </CardContent>
-    <CardFooter className="p-5 pt-0 max-sm:p-4 max-xs:p-3">
-      <div className="w-full h-12 bg-gray-200 rounded-xl"></div>
-    </CardFooter>
   </Card>
 )
 
@@ -78,9 +75,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
       try {
         setLoading(true)
         const booksResponse = (await getBooks()) as any
-        const parsedBooks: BookData[] = Array.isArray(booksResponse.data) 
-          ? booksResponse.data 
-          : [booksResponse.data]
+        const parsedBooks: BookData[] = Array.isArray(booksResponse.data) ? booksResponse.data : [booksResponse.data]
         setBooks(parsedBooks)
       } catch (error) {
         console.error("Ma'lumotlarni olishda xatolik:", error)
@@ -93,17 +88,11 @@ export default function Swipper({ initialBooks }: SwipperProps) {
     fetchData()
   }, [initialBooks, t])
 
-  const filteredBooks: BookData[] = books.filter((book) => {
-    const createdAt = new Date(book.Book.createdAt)
-    const fiveMonthsAgo = new Date()
-    fiveMonthsAgo.setMonth(fiveMonthsAgo.getMonth() - 5)
-    return createdAt > fiveMonthsAgo
-  })
+  // Eng oxirgi 6 ta kitobni olish
+const lastSixBooks: BookData[] = books.slice(-6)
 
-  // Kitoblar sonini loop uchun ko'paytiramiz
-  const duplicatedBooks = filteredBooks.length > 0 
-    ? [...filteredBooks]
-    : []
+// Agar loop uchun duplicatsiya kerak bo‘lsa
+const duplicatedBooks = lastSixBooks.length > 0 ? [...lastSixBooks] : []
 
   const handleCardClick = (bookId: string) => {
     router.push(`/book/${bookId}`)
@@ -133,9 +122,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="w-full mx-auto max-w-[1800px]"
       >
-        
-
-        <div className="relative px-4 h-[85vh]">
+        <div className="relative px-4">
           <Swiper
             slidesPerView={1}
             spaceBetween={20}
@@ -179,7 +166,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
               1536: {
                 slidesPerView: 4.2,
                 spaceBetween: 28,
-              }
+              },
             }}
           >
             {loading
@@ -199,80 +186,98 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                         className="h-full"
                       >
                         <Card
-                          onClick={() => isTokenyes(() => handleCardClick(book.Book.id))}
-                          className="group transition-all duration-500 border border-[#21466D]/10 rounded-2xl cursor-pointer hover:border-[#21466D]/30 h-full flex flex-col justify-between hover:scale-[1.03] transform bg-white/80 backdrop-blur-sm hover:bg-white overflow-hidden"
+                          className="group transition-all duration-500 border border-[#21466D]/10
+                                     rounded-2xl cursor-pointer hover:border-[#21466D]/30
+                                     flex flex-col justify-between hover:scale-[1.02] transform
+                                     bg-white/80 backdrop-blur-sm hover:bg-white overflow-hidden
+                                     h-[480px]" // Increased fixed height for better content spacing
                         >
-                          <CardContent className="p-5 flex-grow flex flex-col max-sm:p-4 max-xs:p-3">
-                            <div className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500 bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg">
-                              <div className="aspect-[3.6/4] w-full relative">
+                          <CardContent className="p-4 flex-grow flex flex-col">
+                            <div
+                              className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500
+                                             bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg"
+                            >
+                              <div className="relative w-full h-[440px] overflow-hidden">
                                 <Image
                                   src={
                                     getFullImageUrl(book.Book.image?.url) ||
-                                    "/placeholder.svg?height=400&width=300&query=book cover"
+                                    "/placeholder.svg?height=400&width=300&query=book cover" ||
+                                    "/placeholder.svg" ||
+                                    "/placeholder.svg" ||
+                                    "/placeholder.svg"
                                   }
                                   alt={book.Book.name}
                                   fill
-                                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                  className="object-contain object-center duration-500 group-hover:scale-105"
                                   loading="lazy"
-                                  sizes="(max-width: 480px) 80vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                                <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
+                                  <div className="absolute bottom-4 left-4 right-4">
+                                    <h4
+                                      className="font-bold text-white text-xl line-clamp-2 drop-shadow-lg"
+                                    >
+                                      {book.Book.name
+                                        .split(/[:\s]+/)
+                                        .slice(0, 4)
+                                        .join(" ")}
+                                      {book.Book.name.split(/[:\s]+/).length > 4 ? "..." : ""}
+                                    </h4>
+                                  </div>
+                                </div>
+
+                                <div
+                                  className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 
+                                               transition-all duration-500 flex flex-col items-center justify-center z-20 w-full"
+                                >
+                                  <div
+                                    className="text-center w-full text-white p-4 transform translate-y-4 
+                                                 group-hover:translate-y-0 transition-all duration-500 delay-100"
+                                  >
+                                    <div className="space-y-2 text-sm mb-6">
+                                      <p className="font-medium">
+                                        {t("common.author")}: {book.Book.Auther?.name || t("common.unknown")}
+                                      </p>
+                                      <p className="font-medium">
+                                        {t("common.year")}: {book.Book.year}
+                                      </p>
+                                      <p className="font-medium">
+                                        {book.Book.page} {t("common.page")}
+                                      </p>
+                                    </div>
+
+                                    <MagnetButton className="w-full ">
+                                      <Button
+                                        className="w-full bg-gradient-to-r from-[#21466D] to-[#4A90E2] text-white
+                                                  hover:from-white hover:to-white font-bold border-0
+                                                  hover:border-2 hover:border-[#21466D] hover:text-[#21466D]
+                                                  flex items-center justify-center gap-2 transition-all duration-500
+                                                  rounded-xl shadow-lg hover:shadow-xl text-sm sm:text-xs h-10"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          isTokenyes(() => handleCardClick(book.Book.id))
+                                        }}
+                                      >
+                                        <Info className="h-4 w-4 sm:h-3 sm:w-3 transition-transform group-hover:rotate-12" />
+                                        {t("common.details")}
+                                      </Button>
+                                    </MagnetButton>
+                                  </div>
+                                </div>
                               </div>
+
                               {isNew && (
-                                <Badge className="absolute top-3 right-3 bg-gradient-to-r from-[#ffc82a] to-[#ffb700] text-[#21466D] text-xs font-bold shadow-lg border-0 px-3 py-1 z-10">
+                                <Badge
+                                  className="absolute top-3 right-3 bg-gradient-to-r from-[#ffc82a] to-[#ffb700]
+                                                   text-[#21466D] text-xs font-bold shadow-lg border-0 px-2 py-1 z-30"
+                                >
                                   {t("common.new")}
                                 </Badge>
                               )}
                             </div>
-                            
-                            <div className="flex-grow flex flex-col justify-between px-1 pt-2">
-                              <div>
-                                <h3
-                                  title={book.Book.name}
-                                  className="font-bold text-lg mb-1 group-hover:text-[#21466D] transition-colors line-clamp-2 text-gray-800 leading-tight max-sm:text-base max-xs:text-sm"
-                                >
-                                  {book.Book.name
-                                    .split(/[:\s]+/)
-                                    .slice(0, 3)
-                                    .join(" ")}
-                                  {book.Book.name.split(/[:\s]+/).length > 4 ? "..." : ""}
-                                </h3>
-                                
-                                <div className="space-y-1 text-sm text-gray-600 mb-4 max-xs:text-xs">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-[#21466D] rounded-full"></div>
-                                    <span className="font-medium">{book.Book.page} {t("common.page")}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-[#21466D] rounded-full"></div>
-                                    <span className="font-medium">{book.Book.year}-{t("common.year")}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 bg-[#ffc82a] rounded-full"></div>
-                                    <span className="text-[#21466D] font-semibold">
-                                      {t("common.author")}: {book.Book.Auther?.name.split(' ').slice(0, 3).join(" ") || t("common.unknown")}
-                                      {book.Book.Auther.name.split(/[:\s]+/).length > 3 ? "..." : ""}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+
+                           
                           </CardContent>
-                          
-                          <CardFooter className="p-5 -pt-5 -mt-10 max-sm:p-4 max-xs:p-3">
-                            <MagnetButton className="w-full">
-                              <Button
-                                className="w-full bg-gradient-to-r from-[#21466D] to-[#4A90E2] text-white hover:from-white hover:to-white font-bold border-0 hover:border-2 hover:border-[#21466D] hover:text-[#21466D] flex items-center justify-center gap-2 transition-all duration-500 rounded-xl shadow-lg hover:shadow-xl max-sm:text-sm max-xs:text-xs max-xs:py-2 h-12 max-xs:h-10"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  isTokenyes(() => handleCardClick(book.Book.id))
-                                }}
-                              >
-                                <Info className="h-4 w-4 max-xs:h-3 max-xs:w-3 transition-transform group-hover:rotate-12" /> 
-                                {t("common.details")}
-                              </Button>
-                            </MagnetButton>
-                          </CardFooter>
                         </Card>
                       </motion.div>
                     </SwiperSlide>
@@ -329,7 +334,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
           .book-swiper {
             padding: 20px 0 45px 0 !important;
           }
-          
+
           .book-swiper .swiper-pagination-bullet {
             width: 8px;
             height: 8px;
@@ -341,7 +346,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
           .book-swiper {
             padding: 18px 0 40px 0 !important;
           }
-          
+
           .book-swiper .swiper-pagination-bullet {
             width: 7px;
             height: 7px;
@@ -353,7 +358,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
           .book-swiper {
             padding: 15px 0 35px 0 !important;
           }
-          
+
           .book-swiper .swiper-pagination {
             bottom: 12px !important;
           }

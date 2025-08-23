@@ -440,7 +440,7 @@ export default function HomePage() {
           {!isLoading && <h1 className="text-[38px] font-[700] text-[#21466D]">{t("common.allBooks")}</h1>}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 max-md:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 max-md:gap-4">
           {isLoading
             ? // Loading skeletons ko'rsatish
               Array.from({ length: itemsPerPage }).map((_, index) => <BookCardSkeleton key={index} />)
@@ -456,19 +456,32 @@ export default function HomePage() {
                     className="group hover:shadow-xl transition-all duration-200 border border-[#21466D]/10 rounded-xl cursor-pointer hover:border-[#21466D]/20 h-full flex flex-col justify-between"
                   >
                     <CardContent className="p-4 flex-grow flex flex-col max-md:p-2">
-                      <div className="relative mb-4 overflow-hidden rounded-lg">
-                        <Image
-                          src={imageUrl}
-                          alt={book.name}
-                          width={150}
-                          height={250}
-                          className="w-full h-[350px] object-cover max-md:h-[600px]"
+                      <div
+                              className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500
+                                            bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg"
+                            >
+
+                            
+                     <div className="relative w-full h-[440px] max-md:h-[220px] overflow-hidden">
+                          <Image
+                        src={
+                          getFullImageUrl(book.image?.url) ||
+                          "/placeholder.svg?height=400&width=300&query=book cover" ||
+                          "/placeholder.svg" ||
+                          "/placeholder.svg" ||
+                          "/placeholder.svg"
+                        }
+                        alt={book.name}
+                        fill
+                        className="object-contain object-center duration-500 group-hover:scale-105"
+                        loading="lazy"
                         />
                         {isNew && (
                           <Badge className="absolute top-2 right-2 bg-[#ffc82a] text-[#21466D] text-xs">
                             {t("common.new")}
                           </Badge>
                         )}
+                      </div>
                       </div>
                       <h3
                         title={book.name}
@@ -481,14 +494,8 @@ export default function HomePage() {
                         {book.name.split(/[:\s]+/).length > 3 ? "..." : ""}
                       </h3>
                       <div className="space-y-1 text-sm text-muted-foreground mb-4">
-                        <p>
-                          {book.page} {t("common.page")}
-                        </p>
-                        <p>
-                          {book.year}-{t("common.year")}
-                        </p>
                         <p className="text-xs text-[#21466D]">
-                          {t("common.author")}: {book.Auther?.name || t("common.unknown")}
+                          {t("common.author")}: {book.Auther?.name || t("common.unknown")}  
                         </p>
                       </div>
                     </CardContent>
