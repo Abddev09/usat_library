@@ -1,5 +1,6 @@
 {
   "common": {
+    "outOfStock":"Kitob qolmagan",
     "booksNotFound":"Kitoblar hali mavjud emas",
     "wifi":"WiFi yoki mobil internetni tekshiring",
     "router":"Router yoki modemni qayta ishga tushiring",
