@@ -126,30 +126,16 @@ export default function Swipper({ initialBooks }: SwipperProps) {
   }
 
   return (
-    <div className="w-full mx-auto px-4 py-4 max-w-[1920px]">
+    <div className="w-full mx-auto px-4 py-4 max-w-[1920px] ">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="w-full mx-auto max-w-[1800px]"
       >
-        {/* Title with loading state */}
-        {loading ? (
-          <TitleSkeleton />
-        ) : (
-          <div className="container mx-auto px-4 py-8 text-start max-w-[1800px]">
-            <motion.h1 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-4xl font-bold bg-gradient-to-r from-[#21466D] to-[#4A90E2] bg-clip-text text-transparent max-lg:text-3xl max-md:text-2xl max-sm:text-xl max-xs:text-lg"
-            >
-              {t("common.newBooks")}
-            </motion.h1>
-          </div>
-        )}
+        
 
-        <div className="relative px-4">
+        <div className="relative px-4 h-[85vh]">
           <Swiper
             slidesPerView={1}
             spaceBetween={20}
@@ -171,27 +157,27 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                 spaceBetween: 16,
               },
               480: {
-                slidesPerView: 1.2,
+                slidesPerView: 1.4,
                 spaceBetween: 16,
               },
               640: {
-                slidesPerView: 1.8,
+                slidesPerView: 1.9,
                 spaceBetween: 20,
               },
               768: {
-                slidesPerView: 2.8,
+                slidesPerView: 2.9,
                 spaceBetween: 20,
               },
               1024: {
-                slidesPerView: 3.8,
+                slidesPerView: 3.9,
                 spaceBetween: 24,
               },
               1280: {
-                slidesPerView: 3.8,
+                slidesPerView: 3.9,
                 spaceBetween: 24,
               },
               1536: {
-                slidesPerView: 3.8,
+                slidesPerView: 4.2,
                 spaceBetween: 28,
               }
             }}
@@ -210,7 +196,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, ease: "easeInOut", delay: index * 0.1 }}
-                        className="h-[80%]"
+                        className="h-full"
                       >
                         <Card
                           onClick={() => isTokenyes(() => handleCardClick(book.Book.id))}
@@ -218,7 +204,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                         >
                           <CardContent className="p-5 flex-grow flex flex-col max-sm:p-4 max-xs:p-3">
                             <div className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500 bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg">
-                              <div className="aspect-[3.2/4] w-full relative">
+                              <div className="aspect-[3.6/4] w-full relative">
                                 <Image
                                   src={
                                     getFullImageUrl(book.Book.image?.url) ||
@@ -247,7 +233,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                                 >
                                   {book.Book.name
                                     .split(/[:\s]+/)
-                                    .slice(0, 4)
+                                    .slice(0, 3)
                                     .join(" ")}
                                   {book.Book.name.split(/[:\s]+/).length > 4 ? "..." : ""}
                                 </h3>
@@ -264,7 +250,8 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                                   <div className="flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-[#ffc82a] rounded-full"></div>
                                     <span className="text-[#21466D] font-semibold">
-                                      {t("common.author")}: {book.Book.Auther?.name || t("common.unknown")}
+                                      {t("common.author")}: {book.Book.Auther?.name.split(' ').slice(0, 3).join(" ") || t("common.unknown")}
+                                      {book.Book.Auther.name.split(/[:\s]+/).length > 3 ? "..." : ""}
                                     </span>
                                   </div>
                                 </div>
@@ -272,7 +259,7 @@ export default function Swipper({ initialBooks }: SwipperProps) {
                             </div>
                           </CardContent>
                           
-                          <CardFooter className="p-5 -pt-5 -mt-8 max-sm:p-4 max-xs:p-3">
+                          <CardFooter className="p-5 -pt-5 -mt-10 max-sm:p-4 max-xs:p-3">
                             <MagnetButton className="w-full">
                               <Button
                                 className="w-full bg-gradient-to-r from-[#21466D] to-[#4A90E2] text-white hover:from-white hover:to-white font-bold border-0 hover:border-2 hover:border-[#21466D] hover:text-[#21466D] flex items-center justify-center gap-2 transition-all duration-500 rounded-xl shadow-lg hover:shadow-xl max-sm:text-sm max-xs:text-xs max-xs:py-2 h-12 max-xs:h-10"
