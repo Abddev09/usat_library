@@ -455,7 +455,7 @@ export default function HomePage() {
                 >
                   {books.length}  
                 </span>
-                {t("commmon.countUnit")}
+                {t("common.countUnit")}
               </h1>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 max-md:gap-4">
