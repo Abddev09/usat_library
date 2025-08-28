@@ -453,7 +453,7 @@ export default function HomePage() {
                   
                   className="inline-block bg-gradient-to-r from-[#21466D] to-[#2a5a8a] bg-clip-text text-transparent font-bold"
                 >
-                  {books.length}
+                  {books.length}  {t("countUnit")}
                 </span>
               </h1>
             </div>
