@@ -1,5 +1,5 @@
 "use client"
-export const dynamicParams = true; // ✅ bu yerda bo‘lishi kerak
+export const dynamicParams = true // ✅ bu yerda bo‘lishi kerak
 
 import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -38,6 +38,7 @@ interface EnrichedBook {
   author_id: string | null
   year: number
   page: number
+  books: number
   book_count: number
   description: string
   image_id: string
@@ -68,20 +69,22 @@ interface EnrichedBook {
       original_name: string
       file_size: number
     }
-    BookCategoryKafedra: {
+    BookCategoryKafedras: {
       category_id: string
       kafedra_id: string
       category: {
+      [key: string]: any;
         id: string
         name_uz: string
         name_ru: string
       }
       kafedra: {
+      [key: string]: any;
         id: string
         name_uz: string
         name_ru: string
       }
-    }
+    }[]
     Language: {
       id: string
       name: string
@@ -98,7 +101,6 @@ interface EnrichedBook {
 }
 
 export default function BookDetailPageClient() {
-  
   const { t, i18n } = useTranslation()
   const params = useParams()
   const router = useRouter()
@@ -128,6 +130,7 @@ export default function BookDetailPageClient() {
           author_id: item.Book.author_id,
           year: item.Book.year,
           page: item.Book.page,
+          books: item.Book.books,
           book_count: item.Book.book_count,
           description: item.Book.description,
           image_id: item.Book.image_id,
@@ -160,31 +163,28 @@ export default function BookDetailPageClient() {
   }, [bookId, router, t])
 
   const addToCart = (selectedBook?: EnrichedBook) => {
-  const targetBook = selectedBook || book
-  if (!targetBook) return
+    const targetBook = selectedBook || book
+    if (!targetBook) return
 
-  const userId = localStorage.getItem("id")
-  if (!userId) {
-    toast.warning("User ID topilmadi. Iltimos qayta login qiling.")
-    return
+    const userId = localStorage.getItem("id")
+    if (!userId) {
+      toast.warning("User ID topilmadi. Iltimos qayta login qiling.")
+      return
+    }
+
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]")
+
+    const existingBook = cart.find((item: any) => item.id === targetBook.id && item.userId === userId)
+
+    if (!existingBook) {
+      cart.push({ ...targetBook, userId })
+      localStorage.setItem("cart", JSON.stringify(cart))
+      toast.success(t("common.bookAddedToCart", { bookName: targetBook.name }))
+      window.dispatchEvent(new Event("storage"))
+    } else {
+      toast.warning(t("common.bookAlreadyInCart", { bookName: targetBook.name }))
+    }
   }
-
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]")
-
-  const existingBook = cart.find(
-    (item: any) => item.id === targetBook.id && item.userId === userId
-  )
-
-  if (!existingBook) {
-    cart.push({ ...targetBook, userId })
-    localStorage.setItem("cart", JSON.stringify(cart))
-    toast.success(t("common.bookAddedToCart", { bookName: targetBook.name }))
-    window.dispatchEvent(new Event("storage"))
-  } else {
-    toast.warning(t("common.bookAlreadyInCart", { bookName: targetBook.name }))
-  }
-}
-
 
   const openPDF = () => {
     if (book?.bookItem?.PDFFile?.file_url) {
@@ -195,36 +195,35 @@ export default function BookDetailPageClient() {
   }
 
   const downloadPDF = () => {
-  if (book?.bookItem?.PDFFile?.file_url) {
-    const downloadUrl = book.bookItem.PDFFile.file_url
-    const filename = book.bookItem.PDFFile.original_name || `${book.name}.pdf`
+    if (book?.bookItem?.PDFFile?.file_url) {
+      const downloadUrl = book.bookItem.PDFFile.file_url
+      const filename = book.bookItem.PDFFile.original_name || `${book.name}.pdf`
 
-    // HTML content that triggers download and auto-closes tab
-    const downloadPage = `
-      <html>
-        <body>
-          <a id="dl" href="${downloadUrl}" download="${filename}"></a>
-          <script>
-            document.getElementById("dl").click();
-            setTimeout(() => window.close(), 1000);
-          </script>
-        </body>
-      </html>
-    `
+      // HTML content that triggers download and auto-closes tab
+      const downloadPage = `
+        <html>
+          <body>
+            <a id="dl" href="${downloadUrl}" download="${filename}"></a>
+            <script>
+              document.getElementById("dl").click();
+              setTimeout(() => window.close(), 1000);
+            </script>
+          </body>
+        </html>
+      `
 
-    // Open new tab
-    const newWindow = window.open()
-    if (newWindow) {
-      newWindow.document.write(downloadPage)
-      newWindow.document.close()
+      // Open new tab
+      const newWindow = window.open()
+      if (newWindow) {
+        newWindow.document.write(downloadPage)
+        newWindow.document.close()
+      }
+
+      toast.success(t("common.pdfDownloading"))
+    } else {
+      toast.warning(t("common.pdfNotAvailable"))
     }
-
-    toast.success(t("common.pdfDownloading"))
-  } else {
-    toast.warning(t("common.pdfNotAvailable"))
   }
-}
-
 
   // Get related books (exclude current book)
   const getRelatedBooks = () => {
@@ -233,28 +232,34 @@ export default function BookDetailPageClient() {
     if (otherBooks.length === 0) return []
 
     // Hozirgi kitobning kategoriya va kafedra ma'lumotlari
-    const currentCategory = book?.bookItem?.BookCategoryKafedra?.category?.id
-    const currentKafedra = book?.bookItem?.BookCategoryKafedra?.kafedra?.id
+    const currentCategories = book?.bookItem?.BookCategoryKafedras?.map((item) => item.category?.id) || []
+    const currentKafedras = book?.bookItem?.BookCategoryKafedras?.map((item) => item.kafedra?.id) || []
 
     // Birinchi navbatda bir xil kategoriya va kafedradagi kitoblar
     const sameCategoryAndKafedra = otherBooks.filter((relatedBook) => {
-      const bookCategory = relatedBook.bookItem?.BookCategoryKafedra?.category?.id
-      const bookKafedra = relatedBook.bookItem?.BookCategoryKafedra?.kafedra?.id
-      return bookCategory === currentCategory && bookKafedra === currentKafedra
+      const bookCategories = relatedBook.bookItem?.BookCategoryKafedras?.map((item) => item.category?.id) || []
+      const bookKafedras = relatedBook.bookItem?.BookCategoryKafedras?.map((item) => item.kafedra?.id) || []
+
+      // Check if there's any overlap in both categories and kafedras
+      const hasCommonCategory = bookCategories.some((cat) => currentCategories.includes(cat))
+      const hasCommonKafedra = bookKafedras.some((kaf) => currentKafedras.includes(kaf))
+
+      return hasCommonCategory && hasCommonKafedra
     })
 
     // Ikkinchi navbatda bir xil kategoriyali kitoblar
     const sameCategoryBooks = otherBooks.filter((relatedBook) => {
-      const bookCategory = relatedBook.bookItem?.BookCategoryKafedra?.category?.id
-      return bookCategory === currentCategory && !sameCategoryAndKafedra.includes(relatedBook)
+      const bookCategories = relatedBook.bookItem?.BookCategoryKafedras?.map((item) => item.category?.id) || []
+      const hasCommonCategory = bookCategories.some((cat) => currentCategories.includes(cat))
+      return hasCommonCategory && !sameCategoryAndKafedra.includes(relatedBook)
     })
 
     // Uchinchi navbatda bir xil kafedradagi kitoblar
     const sameKafedraBooks = otherBooks.filter((relatedBook) => {
+      const bookKafedras = relatedBook.bookItem?.BookCategoryKafedras?.map((item) => item.kafedra?.id) || []
+      const hasCommonKafedra = bookKafedras.some((kaf) => currentKafedras.includes(kaf))
       return (
-        relatedBook.bookItem?.BookCategoryKafedra?.kafedra?.id === currentKafedra &&
-        !sameCategoryAndKafedra.includes(relatedBook) &&
-        !sameCategoryBooks.includes(relatedBook)
+        hasCommonKafedra && !sameCategoryAndKafedra.includes(relatedBook) && !sameCategoryBooks.includes(relatedBook)
       )
     })
 
@@ -375,12 +380,11 @@ export default function BookDetailPageClient() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Back Button */}
-      <Link href='/'>
-      
-      <Button variant="ghost" className="mb-6 bg-[#21466D] hover:bg-[#21466D]/10 text-[white]">
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        {t("common.back")}
-      </Button>
+      <Link href="/">
+        <Button variant="ghost" className="mb-6 bg-[#21466D] hover:bg-[#21466D]/10 text-[white]">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          {t("common.back")}
+        </Button>
       </Link>
 
       <div className="grid grid-cols-3 max-lg:grid-cols-2 max-md:grid-cols-1 gap-8">
@@ -454,22 +458,20 @@ export default function BookDetailPageClient() {
             <CardHeader>
               <CardTitle className="text-2xl md:text-3xl text-[#21466D]">{book.name}</CardTitle>
               <div className="flex flex-wrap gap-2">
-                {book.bookItem?.BookCategoryKafedra && (
+                {book.bookItem?.BookCategoryKafedras && book.bookItem.BookCategoryKafedras.length > 0 && (
                   <>
-                    <Badge variant="secondary" className="bg-[#21466D]/10 text-[#21466D]">
-                      {
-                        book.bookItem.BookCategoryKafedra.category[
-                          `name_${i18n.language}` as keyof typeof book.bookItem.BookCategoryKafedra.category
-                        ]
-                      }
-                    </Badge>
-                    <Badge variant="outline" className="border-[#21466D]/20 text-[#21466D]">
-                      {
-                        book.bookItem.BookCategoryKafedra.kafedra[
-                          `name_${i18n.language}` as keyof typeof book.bookItem.BookCategoryKafedra.kafedra
-                        ]
-                      }
-                    </Badge>
+                    {/* Display all categories */}
+                    {book.bookItem.BookCategoryKafedras.map((item, index) => (
+                      <Badge key={`category-${index}`} variant="secondary" className="bg-[#21466D]/10 text-[#21466D]">
+                        {item.category[`name_${i18n.language}` as keyof typeof item.category]}
+                      </Badge>
+                    ))}
+                    {/* Display all kafedras */}
+                    {book.bookItem.BookCategoryKafedras.map((item, index) => (
+                      <Badge key={`kafedra-${index}`} variant="outline" className="border-[#21466D]/20 text-[#21466D]">
+                        {item.kafedra[`name_${i18n.language}` as keyof typeof item.kafedra]}
+                      </Badge>
+                    ))}
                   </>
                 )}
                 <Badge variant="outline" className="border-[#21466D]/20 text-[#21466D]">
@@ -515,32 +517,34 @@ export default function BookDetailPageClient() {
                   </div>
                 </div>
                 <div className="space-y-4">
-                  {book.bookItem?.BookCategoryKafedra && (
+                  {book.bookItem?.BookCategoryKafedras && book.bookItem.BookCategoryKafedras.length > 0 && (
                     <>
                       <div className="flex items-center gap-3">
                         <Building className="h-5 w-5 text-[#21466D]" />
                         <div>
                           <p className="text-sm text-muted-foreground">{t("common.department")}</p>
-                          <p className="font-medium text-[#21466D]">
-                            {
-                              book.bookItem.BookCategoryKafedra.kafedra[
-                                `name_${i18n.language}` as keyof typeof book.bookItem.BookCategoryKafedra.kafedra
-                              ]
-                            }
-                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {book.bookItem.BookCategoryKafedras.map((item, index) => (
+                              <span key={index} className="font-medium text-[#21466D] text-sm">
+                                {item.kafedra[`name_${i18n.language}` as keyof typeof item.kafedra]}
+                                {index < book.bookItem.BookCategoryKafedras.length - 1 && ", "}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <Globe className="h-5 w-5 text-[#21466D]" />
                         <div>
                           <p className="text-sm text-muted-foreground">{t("common.category")}</p>
-                          <p className="font-medium text-[#21466D]">
-                            {
-                              book.bookItem.BookCategoryKafedra.category[
-                                `name_${i18n.language}` as keyof typeof book.bookItem.BookCategoryKafedra.category
-                              ]
-                            }
-                          </p>
+                          <div className="flex flex-wrap gap-1">
+                            {book.bookItem.BookCategoryKafedras.map((item, index) => (
+                              <span key={index} className="font-medium text-[#21466D] text-sm">
+                                {item.category[`name_${i18n.language}` as keyof typeof item.category]}
+                                {index < book.bookItem.BookCategoryKafedras.length - 1 && ", "}
+                              </span>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </>
@@ -568,7 +572,7 @@ export default function BookDetailPageClient() {
                     <Hash className="h-5 w-5 text-[#21466D]" />
                     <div>
                       <p className="text-sm text-muted-foreground">{t("common.bookId")}</p>
-                      <p className="font-medium text-[#21466D]">#{book.id}</p>
+                      <p className="text-2xl font-bold text-[#21466D]">#{book.id}</p>
                     </div>
                   </div>
                 </div>
@@ -582,7 +586,7 @@ export default function BookDetailPageClient() {
               <CardTitle className="text-xl text-[#21466D]">{t("common.additionalInfo")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                 <div className="p-4 rounded-lg bg-[#21466D]/5">
                   <p className="text-2xl font-bold text-[#21466D]">{book.page}</p>
                   <p className="text-sm text-muted-foreground">{t("common.page")}</p>
@@ -592,8 +596,12 @@ export default function BookDetailPageClient() {
                   <p className="text-sm text-muted-foreground">{t("common.year")}</p>
                 </div>
                 <div className="p-4 rounded-lg bg-[#21466D]/5">
-                  <p className="text-2xl font-bold text-[#21466D]">{book.book_count}</p>
+                  <p className="text-2xl font-bold text-[#21466D]">{book.books}</p>
                   <p className="text-sm text-muted-foreground">{t("common.copies")}</p>
+                </div>
+                <div className="p-4 rounded-lg bg-[#21466D]/5">
+                  <p className="text-2xl font-bold text-[#21466D]">{book.book_count}</p>
+                  <p className="text-sm text-muted-foreground">{t("common.mavjud")}</p>
                 </div>
               </div>
             </CardContent>
@@ -608,12 +616,8 @@ export default function BookDetailPageClient() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl text-[#21466D]">
-                  {book?.bookItem?.BookCategoryKafedra
-                    ? `${
-                        book.bookItem.BookCategoryKafedra.category[
-                          `name_${i18n.language}` as keyof typeof book.bookItem.BookCategoryKafedra.category
-                        ]
-                      } ${t("common.relatedBooks")}`
+                  {book?.bookItem?.BookCategoryKafedras && book.bookItem.BookCategoryKafedras.length > 0
+                    ? `${book.bookItem.BookCategoryKafedras[0].category[`name_${i18n.language}`] as string} ${t("common.relatedBooks")}`
                     : t("common.relatedBooks")}
                 </CardTitle>
                 <div className="flex gap-2">
@@ -690,17 +694,17 @@ export default function BookDetailPageClient() {
                                     <p>
                                       {relatedBook.page} {t("common.page")} • {relatedBook.year}
                                     </p>
-                                    {relatedBook.bookItem?.BookCategoryKafedra && (
-                                      <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
-                                        {
-                                          relatedBook.bookItem.BookCategoryKafedra.category[
-                                            `name_${i18n.language}` as keyof typeof relatedBook.bookItem.BookCategoryKafedra.category
-                                          ]
-                                        }
-                                      </Badge>
-                                    )}
+                                    {relatedBook.bookItem?.BookCategoryKafedras &&
+                                      relatedBook.bookItem.BookCategoryKafedras.length > 0 && (
+                                        <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
+                                          {
+                                            relatedBook.bookItem.BookCategoryKafedras[0].category[
+                                              `name_${i18n.language}`
+                                            ] as string
+                                          }
+                                        </Badge>
+                                      )}
                                   </div>
-                                  <div className="flex flex-col gap-2 mt-auto">{/* tugmalar */}</div>
                                 </div>
                               </CardContent>
                             </Card>
@@ -716,9 +720,7 @@ export default function BookDetailPageClient() {
                   <button
                     key={index}
                     onClick={() => setCurrentSlide(index)}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      index === currentSlide ? "bg-[#21466D] scale-125" : "bg-[#21466D]/30 hover:bg-[#21466D]/60"
-                    }`}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide ? "bg-[#21466D] scale-125" : "bg-[#21466D]/30 hover:bg-[#21466D]/60"}`}
                   />
                 ))}
               </div>

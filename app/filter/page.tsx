@@ -23,6 +23,7 @@ interface Category {
   code: string
   createdAt: string
   updatedAt: string
+  [key: string]: any;
 }
 
 interface Kafedra {
@@ -31,6 +32,7 @@ interface Kafedra {
   name_ru: string
   createdAt: string
   updatedAt: string
+  [key: string]: any;
 }
 
 // Define the EnrichedBook interface to match the new data structure
@@ -71,20 +73,22 @@ interface EnrichedBook {
       original_name: string
       file_size: number
     }
-    BookCategoryKafedra: {
+    BookCategoryKafedras: {
       category_id: string
       kafedra_id: string
       category: {
+        [key: string]: any;
         id: string
         name_uz: string
         name_ru: string
       }
       kafedra: {
+        [key: string]: any;
         id: string
         name_uz: string
         name_ru: string
       }
-    }
+    }[]
     Language: {
       id: string
       name: string
@@ -192,27 +196,56 @@ const FilterPage = () => {
 
   // Filter books when selections change
   useEffect(() => {
-    
-    let result = [...bookItems] // Filter from the enriched bookItems
+    console.log("[v0] Starting filter process...")
+    console.log("[v0] Total bookItems:", bookItems.length)
+    console.log("[v0] Selected categories:", selectedCategories)
+    console.log("[v0] Selected kafedras:", selectedKafedras)
+
+    let result = [...bookItems]
     setCurrentPage(1)
 
-    if (selectedCategories.length > 0) {
-      result = result.filter(
-        (book) =>
-          book.bookItem?.BookCategoryKafedra?.category_id &&
-          selectedCategories.includes(book.bookItem.BookCategoryKafedra.category_id),
-      )
+    if (selectedCategories.length > 0 || selectedKafedras.length > 0) {
+      result = result.filter((book) => {
+        if (!book.bookItem?.BookCategoryKafedras || !Array.isArray(book.bookItem.BookCategoryKafedras)) {
+          console.log("[v0] Book missing BookCategoryKafedras array:", book.name)
+          return false
+        }
+
+        const bookCategoryKafedras = book.bookItem.BookCategoryKafedras
+
+        // Check if any combination in the array matches the selected filters
+        const hasMatchingCombination = bookCategoryKafedras.some((combination) => {
+          // If categories are selected, check if this combination matches any selected category
+          const categoryMatch =
+            selectedCategories.length === 0 ||
+            (combination.category_id && selectedCategories.includes(combination.category_id))
+
+          // If kafedras are selected, check if this combination matches any selected kafedra
+          const kafedraMatch =
+            selectedKafedras.length === 0 ||
+            (combination.kafedra_id && selectedKafedras.includes(combination.kafedra_id))
+
+          // This combination must match both category and kafedra filters (if they are applied)
+          return categoryMatch && kafedraMatch
+        })
+
+        if (hasMatchingCombination) {
+          console.log("[v0] Book matches filters:", book.name, {
+            combinations: bookCategoryKafedras.map((c) => ({
+              categoryId: c.category_id,
+              kafedraId: c.kafedra_id,
+            })),
+          })
+        }
+
+        return hasMatchingCombination
+      })
     }
 
-    if (selectedKafedras.length > 0) {
-      result = result.filter(
-        (book) =>
-          book.bookItem?.BookCategoryKafedra?.kafedra_id &&
-          selectedKafedras.includes(book.bookItem.BookCategoryKafedra.kafedra_id),
-      )
-    }
+    console.log("[v0] Filtered results count:", result.length)
 
     if (result.length === 0 && (selectedCategories.length > 0 || selectedKafedras.length > 0)) {
+      console.log("[v0] No books found matching current filters")
       toast.warning(t("common.noBooksMatchingFilters"), {
         duration: 4000,
         position: "top-center",
@@ -245,31 +278,28 @@ const FilterPage = () => {
   }
 
   const addToCart = (selectedBook?: EnrichedBook) => {
-  const targetBook = selectedBook 
-  if (!targetBook) return
+    const targetBook = selectedBook
+    if (!targetBook) return
 
-  const userId = localStorage.getItem("id")
-  if (!userId) {
-    toast.warning("User ID topilmadi. Iltimos qayta login qiling.")
-    return
+    const userId = localStorage.getItem("id")
+    if (!userId) {
+      toast.warning("User ID topilmadi. Iltimos qayta login qiling.")
+      return
+    }
+
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]")
+
+    const existingBook = cart.find((item: any) => item.id === targetBook.id && item.userId === userId)
+
+    if (!existingBook) {
+      cart.push({ ...targetBook, userId })
+      localStorage.setItem("cart", JSON.stringify(cart))
+      toast.success(t("common.bookAddedToCart", { bookName: targetBook.name }))
+      window.dispatchEvent(new Event("storage"))
+    } else {
+      toast.warning(t("common.bookAlreadyInCart", { bookName: targetBook.name }))
+    }
   }
-
-  const cart = JSON.parse(localStorage.getItem("cart") || "[]")
-
-  const existingBook = cart.find(
-    (item: any) => item.id === targetBook.id && item.userId === userId
-  )
-
-  if (!existingBook) {
-    cart.push({ ...targetBook, userId })
-    localStorage.setItem("cart", JSON.stringify(cart))
-    toast.success(t("common.bookAddedToCart", { bookName: targetBook.name }))
-    window.dispatchEvent(new Event("storage"))
-  } else {
-    toast.warning(t("common.bookAlreadyInCart", { bookName: targetBook.name }))
-  }
-}
-
 
   const openPDF = (book: EnrichedBook, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -351,8 +381,8 @@ const FilterPage = () => {
               <h3 className="text-lg font-semibold">{t("common.filter")}</h3>
               <MagnetButton>
                 <Button variant="ghost" size="icon" onClick={() => setShowMobileFilter(false)} className="h-8 w-8">
-                <X className="h-4 w-4" />
-              </Button>
+                  <X className="h-4 w-4" />
+                </Button>
               </MagnetButton>
             </div>
 
@@ -367,13 +397,13 @@ const FilterPage = () => {
                     </span>
                     <MagnetButton className="w-full">
                       <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearAllFilters}
-                      className="text-xs h-6 px-2 text-[#21466D]"
-                    >
-                      {t("common.clearAll")}
-                    </Button>
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearAllFilters}
+                        className="text-xs h-6 px-2 text-[#21466D]"
+                      >
+                        {t("common.clearAll")}
+                      </Button>
                     </MagnetButton>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -381,7 +411,7 @@ const FilterPage = () => {
                       const category = categories.find((c) => c.id === catId)
                       return category ? (
                         <Badge key={catId} variant="secondary" className="text-xs">
-                          {category[`name_${i18n.language.slice(0, 2)}` as keyof typeof category]}
+                          {category[`name_${i18n.language.slice(0, 2)}`]}
                         </Badge>
                       ) : null
                     })}
@@ -389,7 +419,7 @@ const FilterPage = () => {
                       const kafedra = kafedras.find((k) => k.id === kafId)
                       return kafedra ? (
                         <Badge key={kafId} variant="outline" className="text-xs">
-                          {kafedra[`name_${i18n.language.slice(0,2)}` as keyof typeof kafedra]}
+                          {kafedra[`name_${i18n.language.slice(0, 2)}`]}
                         </Badge>
                       ) : null
                     })}
@@ -413,7 +443,7 @@ const FilterPage = () => {
                         htmlFor={`mobile-category-${category.id}`}
                         className="text-sm cursor-pointer flex-1 font-medium"
                       >
-                        {category[`name_${i18n.language.slice(0, 2)}` as keyof typeof category]}
+                        {category[`name_${i18n.language.slice(0, 2)}`]}
                       </label>
                     </div>
                   ))}
@@ -436,7 +466,7 @@ const FilterPage = () => {
                         htmlFor={`mobile-kafedra-${kafedra.id}`}
                         className="text-sm cursor-pointer flex-1 font-medium"
                       >
-                        {kafedra[`name_${i18n.language.slice(0, 2)}` as keyof typeof kafedra]}
+                        {kafedra[`name_${i18n.language.slice(0, 2)}`]}
                       </label>
                     </div>
                   ))}
@@ -451,11 +481,11 @@ const FilterPage = () => {
               </div>
               <MagnetButton className="w-full">
                 <Button
-                onClick={() => setShowMobileFilter(false)}
-                className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white"
-              >
-                {t("common.viewResults")}
-              </Button>
+                  onClick={() => setShowMobileFilter(false)}
+                  className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white"
+                >
+                  {t("common.viewResults")}
+                </Button>
               </MagnetButton>
             </div>
           </div>
@@ -475,7 +505,7 @@ const FilterPage = () => {
                 onCheckedChange={(checked) => handleCheckboxChange("category", category.id, checked as boolean)}
               />
               <label htmlFor={`category-${category.id}`} className="text-sm cursor-pointer">
-                {category[`name_${i18n.language}` as keyof typeof category]}
+                {category[`name_${i18n.language}`]}
               </label>
             </div>
           ))}
@@ -492,7 +522,7 @@ const FilterPage = () => {
                 onCheckedChange={(checked) => handleCheckboxChange("kafedra", kafedra.id, checked as boolean)}
               />
               <label htmlFor={`kafedra-${kafedra.id}`} className="text-sm cursor-pointer">
-                {kafedra[`name_${i18n.language}` as keyof typeof kafedra]}
+                {kafedra[`name_${i18n.language}`]}
               </label>
             </div>
           ))}
@@ -502,8 +532,8 @@ const FilterPage = () => {
         {(selectedCategories.length > 0 || selectedKafedras.length > 0) && (
           <MagnetButton className="w-2/3">
             <Button variant="outline" onClick={clearAllFilters} className="w-full bg-transparent">
-            {t("common.clearAll")}
-          </Button>
+              {t("common.clearAll")}
+            </Button>
           </MagnetButton>
         )}
       </div>
@@ -517,121 +547,101 @@ const FilterPage = () => {
           </p>
         </div>
 
-       { bookItems.length === 0 ? (
-  // 2-variant: umuman kitoblar yo‘q bo‘lsa
-  <div className="text-center py-12">
-    <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-    <h1 className="text-[30px] font-bold text-[#21466D]">
-      {t("common.booksNotFound")}
-    </h1>
-    <p className="text-[15px] text-[#21466D] mb-4">
-      Keyinroq urinib ko'ring
-    </p>
-  </div> ) :
-       paginatedBooks.length === 0 ? (
-  // 1-variant: filtr bo‘yicha kitob topilmasa
-  <div className="text-center py-12">
-    <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-    <p className="text-lg text-muted-foreground mb-2">
-      {t("common.noBooksMatchingFilters")}
-    </p>
-    <p className="text-sm text-muted-foreground">
-      {t("common.tryOtherFilters")}
-    </p>
-  </div>
-) : (
-  // 3-variant: kitoblar mavjud bo‘lsa, grid ko‘rsatish
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6 mb-8 px-4 md:px-0">
-    {paginatedBooks.map((book) => {
-      const imageUrl = book.image?.url
-        ? getFullImageUrl(book.image.url)
-        : "/placeholder.svg";
-      const isNew = isBookNew(book.bookItem.Status.id);
+        {bookItems.length === 0 ? (
+          // 2-variant: umuman kitoblar yo‘q bo‘lsa
+          <div className="text-center py-12">
+            <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+            <h1 className="text-[30px] font-bold text-[#21466D]">{t("common.booksNotFound")}</h1>
+            <p className="text-[15px] text-[#21466D] mb-4">Keyinroq urinib ko'ring</p>
+          </div>
+        ) : paginatedBooks.length === 0 ? (
+          // 1-variant: filtr bo‘yicha kitob topilmasa
+          <div className="text-center py-12">
+            <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+            <p className="text-lg text-muted-foreground mb-2">{t("common.noBooksMatchingFilters")}</p>
+            <p className="text-sm text-muted-foreground">{t("common.tryOtherFilters")}</p>
+          </div>
+        ) : (
+          // 3-variant: kitoblar mavjud bo‘lsa, grid ko‘rsatish
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4 md:gap-6 mb-8 px-4 md:px-0">
+            {paginatedBooks.map((book) => {
+              const imageUrl = book.image?.url ? getFullImageUrl(book.image.url) : "/placeholder.svg"
+              const isNew = isBookNew(book.bookItem.Status.id)
 
-      return (
-        <Card
-          key={book.id}
-          onClick={() => isTokenyes(() => handleCardClick(book.id))}
-          className="group hover:shadow-xl transition-all duration-200 border border-[#21466D]/10 rounded-xl cursor-pointer hover:border-[#21466D]/20 h-full flex flex-col"
-        >
-          <CardContent className="p-4 flex-grow">
-            <div className="relative mb-3 overflow-hidden rounded-lg">
-              <Image
-                src={(imageUrl as string) || "/placeholder.svg"}
-                alt={book.name}
-                width={150}
-                height={250}
-                className="w-full h-[600px] md:h-[300px] object-cover"
-              />
-              {isNew && (
-                <Badge className="absolute top-2 right-2 bg-[#ffc82a] text-[#21466D] text-xs">
-                  {t("common.new")}
-                </Badge>
-              )}
-            </div>
+              return (
+                <Card
+                  key={book.id}
+                  onClick={() => isTokenyes(() => handleCardClick(book.id))}
+                  className="group hover:shadow-xl transition-all duration-200 border border-[#21466D]/10 rounded-xl cursor-pointer hover:border-[#21466D]/20 h-full flex flex-col"
+                >
+                  <CardContent className="p-4 flex-grow">
+                    <div className="relative mb-3 overflow-hidden rounded-lg">
+                      <Image
+                        src={(imageUrl as string) || "/placeholder.svg"}
+                        alt={book.name}
+                        width={150}
+                        height={250}
+                        className="w-full h-[600px] md:h-[300px] object-cover"
+                      />
+                      {isNew && (
+                        <Badge className="absolute top-2 right-2 bg-[#ffc82a] text-[#21466D] text-xs">
+                          {t("common.new")}
+                        </Badge>
+                      )}
+                    </div>
 
-            <h3
-              className="font-semibold text-base mb-2 line-clamp-2 group-hover:text-[#21466D] transition-colors"
-              title={book.name}
-            >
-              {book.name.length > 50
-                ? book.name.slice(0, 50) + "..."
-                : book.name}
-            </h3>
+                    <h3
+                      className="font-semibold text-base mb-2 line-clamp-2 group-hover:text-[#21466D] transition-colors"
+                      title={book.name}
+                    >
+                      {book.name.length > 50 ? book.name.slice(0, 50) + "..." : book.name}
+                    </h3>
 
-            <div className="space-y-1 text-sm text-muted-foreground mb-3">
-              <p>
-                {book.year}-{t("common.year")}
-              </p>
-              <p className="text-xs text-[#21466D]">
-                {t("common.author")}:{" "}
-                {book.Auther?.name || t("common.unknown")}
-              </p>
+                    <div className="space-y-1 text-sm text-muted-foreground mb-3">
+                      <p>
+                        {book.year}-{t("common.year")}
+                      </p>
+                      <p className="text-xs text-[#21466D]">
+                        {t("common.author")}: {book.Auther?.name || t("common.unknown")}
+                      </p>
 
-              {book.bookItem?.BookCategoryKafedra && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  <Badge
-                    variant="secondary"
-                    className="text-xs bg-[#21466D]/10 text-[#21466D]"
-                  >
-                    {
-                      book.bookItem.BookCategoryKafedra.category[
-                        `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedra.category
-                      ]
-                    }
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className="text-xs border-[#21466D]/20 text-[#21466D]"
-                  >
-                    {
-                      book.bookItem.BookCategoryKafedra.kafedra[
-                        `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedra.kafedra
-                      ]
-                    }
-                  </Badge>
-                </div>
-              )}
-            </div>
-          </CardContent>
+                      {book.bookItem?.BookCategoryKafedras &&
+                        Array.isArray(book.bookItem.BookCategoryKafedras) &&
+                        book.bookItem.BookCategoryKafedras.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
+                              {book.bookItem.BookCategoryKafedras[0].category[`name_${i18n.language.slice(0, 2)}`]}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
+                              {book.bookItem.BookCategoryKafedras[0].kafedra[`name_${i18n.language.slice(0, 2)}`]}
+                            </Badge>
+                            {/* Show indicator if there are multiple combinations */}
+                            {book.bookItem.BookCategoryKafedras.length > 1 && (
+                              <Badge variant="outline" className="text-xs border-gray-300 text-gray-500">
+                                +{book.bookItem.BookCategoryKafedras.length - 1}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                    </div>
+                  </CardContent>
 
-          <CardFooter className="p-4 pt-0 flex flex-col gap-2">
-            <MagnetButton className="w-full">
-              <Button
-                className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white"
-                onClick={(e) => isTokenyes(() => addToCart(book))}
-              >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                {t("common.addBookToCart")}
-              </Button>
-            </MagnetButton>
-          </CardFooter>
-        </Card>
-      );
-    })}
-  </div>
-)}
-
+                  <CardFooter className="p-4 pt-0 flex flex-col gap-2">
+                    <MagnetButton className="w-full">
+                      <Button
+                        className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white"
+                        onClick={(e) => isTokenyes(() => addToCart(book))}
+                      >
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        {t("common.addBookToCart")}
+                      </Button>
+                    </MagnetButton>
+                  </CardFooter>
+                </Card>
+              )
+            })}
+          </div>
+        )}
 
         {/* Pagination */}
         {paginatedBooks.length > 0 && totalPages > 1 && (

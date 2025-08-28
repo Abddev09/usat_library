@@ -51,7 +51,7 @@ interface EnrichedBook {
       original_name: string
       file_size: number
     }
-    BookCategoryKafedra: {
+    BookCategoryKafedras: {
       category_id: string
       kafedra_id: string
       category: {
@@ -293,19 +293,19 @@ export default function CartPage() {
                     <p className="text-xs text-[#21466D]">
                       {t("common.author")}: {book.Auther?.name || t("common.unknown")}
                     </p>
-                    {book.bookItem?.BookCategoryKafedra && (
+                    {book.bookItem?.BookCategoryKafedras && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
                           {
-                            book.bookItem.BookCategoryKafedra.category[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedra.category
+                            book.bookItem.BookCategoryKafedras.category[
+                              `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedras.category
                             ]
                           }
                         </Badge>
                         <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
                           {
-                            book.bookItem.BookCategoryKafedra.kafedra[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedra.kafedra
+                            book.bookItem.BookCategoryKafedras.kafedra[
+                              `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedras.kafedra
                             ]
                           }
                         </Badge>

@@ -1,6 +1,5 @@
 "use client"
-
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import React from "react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -19,6 +18,7 @@ import TextType from "@/components/TextType"
 import { t } from "i18next"
 import type { BookData } from "@/types/index"
 import NetworkError from "@/components/network-error"
+import { motion, animate, useInView } from "framer-motion"
 
 // Define the EnrichedBook interface to match the new data structure
 interface EnrichedBook {
@@ -116,7 +116,7 @@ const BookCardSkeleton = () => (
 
 // Welcome Loading Screen Component
 const WelcomeLoadingScreen = ({ onComplete }: { onComplete: () => void }) => {
-   useEffect(() => {
+  useEffect(() => {
     // Disable scroll
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -201,8 +201,28 @@ export default function HomePage() {
   const [showWelcomeScreen, setShowWelcomeScreen] = useState(false)
   const [showNetworkError, setShowNetworkError] = useState(false)
   const [networkError, setNetworkError] = useState(false)
-
   const itemsPerPage = 20
+
+  const countRef = useRef<HTMLSpanElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  // scroll qilib ko‘rinadigan joyga kirganda true bo‘ladi
+  const isInView = useInView(containerRef, { once: true })
+
+  useEffect(() => {
+    if (!isLoading && isInView && countRef.current) {
+      const controls = animate(0, books.length, {
+        duration: 1.5, // Increased duration for smoother animation
+        ease: "easeOut",
+        onUpdate(value) {
+          if (countRef.current) {
+            countRef.current.textContent = Math.floor(value).toString()
+          }
+        },
+      })
+
+      return () => controls.stop()
+    }
+  }, [books.length, isLoading, isInView])
 
   // Effect to determine if welcome screen should show (once per browser session)
   useEffect(() => {
@@ -222,7 +242,6 @@ export default function HomePage() {
       await fetchAllData()
     } catch (error: any) {
       console.error("Network error:", error)
-
       // Check if it's a network error
       if (
         error.code === "NETWORK_ERROR" ||
@@ -327,16 +346,13 @@ export default function HomePage() {
   const addToCart = (selectedBook?: EnrichedBook) => {
     const targetBook = selectedBook
     if (!targetBook) return
-
     const userId = localStorage.getItem("id")
     if (!userId) {
       toast.warning("User ID topilmadi. Iltimos qayta login qiling.")
       return
     }
-
     const cart = JSON.parse(localStorage.getItem("cart") || "[]")
     const existingBook = cart.find((item: any) => item.id === targetBook.id && item.userId === userId)
-
     if (!existingBook) {
       cart.push({ ...targetBook, userId })
       localStorage.setItem("cart", JSON.stringify(cart))
@@ -352,7 +368,6 @@ export default function HomePage() {
   }, [books])
 
   const totalPages = Math.ceil(repeatedBooks.length / itemsPerPage)
-
   const currentBooks = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage
     return repeatedBooks.slice(startIndex, startIndex + itemsPerPage)
@@ -361,7 +376,6 @@ export default function HomePage() {
   const getPaginationButtons = (currentPage: number, totalPages: number) => {
     const pages: (number | string)[] = []
     const maxVisiblePages = 5
-
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i)
@@ -369,7 +383,6 @@ export default function HomePage() {
     } else {
       let start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
       let end = Math.min(totalPages, start + maxVisiblePages - 1)
-
       if (end - start + 1 < maxVisiblePages) {
         if (start === 1) {
           end = Math.min(totalPages, start + maxVisiblePages - 1)
@@ -377,18 +390,15 @@ export default function HomePage() {
           start = Math.max(1, totalPages - maxVisiblePages + 1)
         }
       }
-
       if (start > 1) {
         pages.push(1)
         if (start > 2) {
           pages.push("...")
         }
       }
-
       for (let i = start; i <= end; i++) {
         pages.push(i)
       }
-
       if (end < totalPages) {
         if (end < totalPages - 1) {
           pages.push("...")
@@ -396,7 +406,6 @@ export default function HomePage() {
         pages.push(totalPages)
       }
     }
-
     return pages
   }
 
@@ -427,149 +436,149 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background mt-10">
       {/* Swiperga yuklangan kitoblarni prop orqali uzatamiz */}
-
-      {books.length === 0  ? <div className="text-center py-12">
-                  <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                  <h1 className="text-[30px] font-bold text-[#21466D]">{t('common.booksNotFound')}</h1>
-                  <p className="text-[15px] text-[#21466D] mb-4">Keyinroq urinib ko'ring</p>
-                </div> : 
-      <div>
-      <BookSwiper initialBooks={swiperBooks} />
-      <div className="container mx-auto px-4 py-8">
-        <div className="w-full px-10 py-8 text-start">
-          {!isLoading && <h1 className="text-[38px] font-[700] text-[#21466D]">{t("common.allBooks")}</h1>}
+      {books.length === 0 ? (
+        <div className="text-center py-12">
+          <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+          <h1 className="text-[30px] font-bold text-[#21466D]">{t("common.booksNotFound")}</h1>
+          <p className="text-[15px] text-[#21466D] mb-4">Keyinroq urinib ko'ring</p>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 max-md:gap-4">
-          {isLoading
-            ? // Loading skeletons ko'rsatish
-              Array.from({ length: itemsPerPage }).map((_, index) => <BookCardSkeleton key={index} />)
-            : // Haqiqiy kitoblar ko'rsatish
-              currentBooks.map((book, index) => {
-                const imageUrl = book.image?.url ? getFullImageUrl(book.image.url) : "/placeholder.svg"
-                const isNew = isBookNew(book.bookItem.Status.id)
-
-                return (
-                  <Card
-                    key={book.id}
-                    onClick={() => isTokenyes(() => handleCardClick(book.id))}
-                    className="group hover:shadow-xl transition-all duration-200 border border-[#21466D]/10 rounded-xl cursor-pointer hover:border-[#21466D]/20 h-full flex flex-col justify-between"
-                  >
-                    <CardContent className="p-4 flex-grow flex flex-col max-md:p-2">
-                      <div
-                              className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500
-                                            bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg"
-                            >
-
-                            
-                     <div className="relative w-full h-[440px] max-md:h-[220px] overflow-hidden">
-                          <Image
-                        src={
-                          getFullImageUrl(book.image?.url) ||
-                          "/placeholder.svg?height=400&width=300&query=book cover" ||
-                          "/placeholder.svg" ||
-                          "/placeholder.svg" ||
-                          "/placeholder.svg"
-                        }
-                        alt={book.name}
-                        fill
-                        className="object-contain object-center duration-500 group-hover:scale-105"
-                        loading="lazy"
-                        />
-                        {isNew && (
-                          <Badge className="absolute top-2 right-2 bg-[#ffc82a] text-[#21466D] text-xs">
-                            {t("common.new")}
-                          </Badge>
-                        )}
-                      </div>
-                      </div>
-                      <h3
-                        title={book.name}
-                        className="font-semibold text-lg mb-1 group-hover:text-[#21466D] transition-colors line-clamp-2 min-h-[2rem]"
-                      >
-                        {book.name
-                          .split(/[:\s]+/)
-                          .slice(0, 3)
-                          .join(" ")}
-                        {book.name.split(/[:\s]+/).length > 3 ? "..." : ""}
-                      </h3>
-                      <div className="space-y-1 text-sm text-muted-foreground mb-4">
-                        <p className="text-xs text-[#21466D]">
-                          {t("common.author")}: {book.Auther?.name || t("common.unknown")}  
-                        </p>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-4 pt-0 flex flex-col gap-2 max-md:gap-1 max-md:p-2">
-                      <MagnetButton className="w-full">
-                        <Button
-                          className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white flex items-center justify-center gap-1"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            isTokenyes(() => addToCart(book))
-                          }}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" /> {t("common.addBookToCart")}
-                        </Button>
-                      </MagnetButton>
-                    </CardFooter>
-                  </Card>
-                )
-              })}
-        </div>
-
-        {!isLoading && totalPages > 1 && (
-          <div className="flex justify-center mt-6">
-            <div className="flex items-center space-x-2">
-              <MagnetButton>
-                <Button
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  variant="outline"
-                  className="text-[#21466D] border-[#21466D]/40 hover:bg-[#21466D]/10"
+      ) : (
+        <div>
+          <BookSwiper initialBooks={swiperBooks} />
+          <div className="container mx-auto px-4 py-8">
+            <div  className="w-full px-10 py-8 text-start">
+              <h1 className="text-[38px] font-[700] text-[#21466D] flex justify-start items-center gap-5">
+                {t("common.allBooks")}:
+                <span
+                  
+                  className="inline-block bg-gradient-to-r from-[#21466D] to-[#2a5a8a] bg-clip-text text-transparent font-bold"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </MagnetButton>
-
-              {getPaginationButtons(currentPage, totalPages).map((page, index) => (
-                <React.Fragment key={index}>
-                  {page === "..." ? (
-                    <span className="px-4 py-2 text-sm text-gray-500">...</span>
-                  ) : (
-                    <MagnetButton>
-                      <Button
-                        onClick={() => setCurrentPage(page as number)}
-                        variant={currentPage === page ? "default" : "outline"}
-                        className={
-                          currentPage === page
-                            ? "bg-[#21466D] text-white hover:bg-[#21466D]/90"
-                            : "text-[#21466D] border-[#21466D]/40 hover:bg-[#21466D]/10"
-                        }
-                      >
-                        {page}
-                      </Button>
-                    </MagnetButton>
-                  )}
-                </React.Fragment>
-              ))}
-
-              <MagnetButton>
-                <Button
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  variant="outline"
-                  className="text-[#21466D] border-[#21466D]/40 hover:bg-[#21466D]/10"
-                >
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </MagnetButton>
+                  {books.length}
+                </span>
+              </h1>
             </div>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8 max-md:gap-4">
+              {isLoading
+                ? // Loading skeletons ko'rsatish
+                  Array.from({ length: itemsPerPage }).map((_, index) => <BookCardSkeleton key={index} />)
+                : // Haqiqiy kitoblar ko'rsatish
+                  currentBooks.map((book, index) => {
+                    const imageUrl = book.image?.url ? getFullImageUrl(book.image.url) : "/placeholder.svg"
+                    const isNew = isBookNew(book.bookItem.Status.id)
+                    return (
+                      <Card
+                        key={book.id}
+                        onClick={() => isTokenyes(() => handleCardClick(book.id))}
+                        className="group hover:shadow-xl transition-all duration-200 border border-[#21466D]/10 rounded-xl cursor-pointer hover:border-[#21466D]/20 h-full flex flex-col justify-between"
+                      >
+                        <CardContent className="p-4 flex-grow flex flex-col max-md:p-2">
+                          <div className="relative mb-2 overflow-hidden rounded-xl transition-all duration-500 bg-gradient-to-br from-gray-50 to-gray-100 group-hover:shadow-lg">
+                            <div className="relative w-full h-[440px] max-md:h-[220px] overflow-hidden">
+                              <Image
+                                src={
+                                  getFullImageUrl(book.image?.url) ||
+                                  "/placeholder.svg?height=400&width=300&query=book cover" ||
+                                  "/placeholder.svg" ||
+                                  "/placeholder.svg" ||
+                                  "/placeholder.svg" ||
+                                  "/placeholder.svg" ||
+                                  "/placeholder.svg"
+                                }
+                                alt={book.name}
+                                fill
+                                className="object-contain object-center duration-500 group-hover:scale-105"
+                                loading="lazy"
+                              />
+                              {isNew && (
+                                <Badge className="absolute top-2 right-2 bg-[#ffc82a] text-[#21466D] text-xs">
+                                  {t("common.new")}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <h3
+                            title={book.name}
+                            className="font-semibold text-lg mb-1 group-hover:text-[#21466D] transition-colors line-clamp-2 min-h-[2rem]"
+                          >
+                            {book.name
+                              .split(/[:\s]+/)
+                              .slice(0, 3)
+                              .join(" ")}
+                            {book.name.split(/[:\s]+/).length > 3 ? "..." : ""}
+                          </h3>
+                          <div className="space-y-1 text-sm text-muted-foreground mb-4">
+                            <p className="text-xs text-[#21466D]">
+                              {t("common.author")}: {book.Auther?.name || t("common.unknown")}
+                            </p>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="p-4 pt-0 flex flex-col gap-2 max-md:gap-1 max-md:p-2">
+                          <MagnetButton className="w-full">
+                            <Button
+                              className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white flex items-center justify-center gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                isTokenyes(() => addToCart(book))
+                              }}
+                            >
+                              <ShoppingCart className="h-4 w-4 mr-2" /> {t("common.addBookToCart")}
+                            </Button>
+                          </MagnetButton>
+                        </CardFooter>
+                      </Card>
+                    )
+                  })}
+            </div>
+            {!isLoading && totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <div className="flex items-center space-x-2">
+                  <MagnetButton>
+                    <Button
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      variant="outline"
+                      className="text-[#21466D] border-[#21466D]/40 hover:bg-[#21466D]/10"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                  </MagnetButton>
+                  {getPaginationButtons(currentPage, totalPages).map((page, index) => (
+                    <React.Fragment key={index}>
+                      {page === "..." ? (
+                        <span className="px-4 py-2 text-sm text-gray-500">...</span>
+                      ) : (
+                        <MagnetButton>
+                          <Button
+                            onClick={() => setCurrentPage(page as number)}
+                            variant={currentPage === page ? "default" : "outline"}
+                            className={
+                              currentPage === page
+                                ? "bg-[#21466D] text-white hover:bg-[#21466D]/90"
+                                : "text-[#21466D] border-[#21466D]/40 hover:bg-[#21466D]/10"
+                            }
+                          >
+                            {page}
+                          </Button>
+                        </MagnetButton>
+                      )}
+                    </React.Fragment>
+                  ))}
+                  <MagnetButton>
+                    <Button
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      variant="outline"
+                      className="text-[#21466D] border-[#21466D]/40 hover:bg-[#21466D]/10"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </MagnetButton>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      </div>
-      }
-
+        </div>
+      )}
       <ScrollToTopButton />
     </div>
   )

@@ -56,7 +56,7 @@ interface BookItem {
     original_name: string
     file_size: number
   }
-  BookCategoryKafedra: {
+  BookCategoryKafedras: {
     category_id: string
     kafedra_id: string
     category: {

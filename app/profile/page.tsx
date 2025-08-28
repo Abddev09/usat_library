@@ -84,7 +84,7 @@ interface BookItem {
     original_name: string
     file_size: number
   }
-  BookCategoryKafedra: {
+  BookCategoryKafedras: {
     category_id: string
     kafedra_id: string
     category: {
@@ -411,19 +411,19 @@ export default function ProfilePage() {
               <div className="text-sm">
                 {order.bookItem && (
                   <div className="flex flex-wrap gap-1">
-                    {order.bookItem.BookCategoryKafedra && (
+                    {order.bookItem.BookCategoryKafedras && (
                       <>
                         <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
                           {
-                            order.bookItem.BookCategoryKafedra.category[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof order.bookItem.BookCategoryKafedra.category
+                            order.bookItem.BookCategoryKafedras.category[
+                              `name_${i18n.language.slice(0, 2)}` as keyof typeof order.bookItem.BookCategoryKafedras.category
                             ]
                           }
                         </Badge>
                         <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
                           {
-                            order.bookItem.BookCategoryKafedra.kafedra[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof order.bookItem.BookCategoryKafedra.kafedra
+                            order.bookItem.BookCategoryKafedras.kafedra[
+                              `name_${i18n.language.slice(0, 2)}` as keyof typeof order.bookItem.BookCategoryKafedras.kafedra
                             ]
                           }
                         </Badge>

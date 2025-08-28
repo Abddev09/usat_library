@@ -1,5 +1,6 @@
 {
   "common": {
+    "mavjud":"Mavjud",
     "outOfStock":"Kitob qolmagan",
     "booksNotFound":"Kitoblar hali mavjud emas",
     "wifi":"WiFi yoki mobil internetni tekshiring",
