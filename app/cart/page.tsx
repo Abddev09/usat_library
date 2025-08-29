@@ -55,16 +55,18 @@ interface EnrichedBook {
       category_id: string
       kafedra_id: string
       category: {
+        [key: string]: any;
         id: string
         name_uz: string
         name_ru: string
       }
       kafedra: {
+        [key: string]: any;
         id: string
         name_uz: string
         name_ru: string
       }
-    }
+    }[]
     Language: {
       id: string
       name: string
@@ -293,24 +295,24 @@ export default function CartPage() {
                     <p className="text-xs text-[#21466D]">
                       {t("common.author")}: {book.Auther?.name || t("common.unknown")}
                     </p>
-                    {book.bookItem?.BookCategoryKafedras && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
-                          {
-                            book.bookItem.BookCategoryKafedras.category[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedras.category
-                            ]
-                          }
-                        </Badge>
-                        <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
-                          {
-                            book.bookItem.BookCategoryKafedras.kafedra[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof book.bookItem.BookCategoryKafedras.kafedra
-                            ]
-                          }
-                        </Badge>
-                      </div>
-                    )}
+                    {book.bookItem?.BookCategoryKafedras &&
+                                            Array.isArray(book.bookItem.BookCategoryKafedras) &&
+                                            book.bookItem.BookCategoryKafedras.length > 0 && (
+                                              <div className="flex flex-wrap gap-1 mt-2">
+                                                <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
+                                                  {book.bookItem.BookCategoryKafedras[0].category[`name_${i18n.language.slice(0, 2)}`]}
+                                                </Badge>
+                                                <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
+                                                  {book.bookItem.BookCategoryKafedras[0].kafedra[`name_${i18n.language.slice(0, 2)}`]}
+                                                </Badge>
+                                                {/* Show indicator if there are multiple combinations */}
+                                                {book.bookItem.BookCategoryKafedras.length > 1 && (
+                                                  <Badge variant="outline" className="text-xs border-gray-300 text-gray-500">
+                                                    +{book.bookItem.BookCategoryKafedras.length - 1}
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                            )}
                   </div>
                 </div>
                 <Button
