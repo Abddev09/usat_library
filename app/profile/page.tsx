@@ -17,6 +17,8 @@ import {
   ChevronRight,
   ArrowLeft,
   Globe,
+  Filter,
+  Tag,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -43,7 +45,6 @@ interface Order {
     telegram_id: string | null
   }
   Book: {
-    // This is the nested Book from BookItem
     id: string
     name: string
     author_id: string | null
@@ -85,21 +86,22 @@ interface BookItem {
     file_size: number
   }
   BookCategoryKafedras: {
-    category_id: string
-    kafedra_id: string
-    category: {
-      id: string
-      name_uz: string
-      name_ru: string
-    }
-    kafedra: {
-      id: string
-      name_uz: string
-      name_ru: string
-    }
-  }
+      category_id: string
+      kafedra_id: string
+      category: {
+        [key: string]: any;
+        id: string
+        name_uz: string
+        name_ru: string
+      }
+      kafedra: {
+        [key: string]: any;
+        id: string
+        name_uz: string
+        name_ru: string
+      }
+    }[]
   Book: {
-    // Nested Book data within BookItem
     id: string
     name: string
     author_id: string | null
@@ -124,8 +126,22 @@ interface BookItem {
 }
 
 interface EnrichedOrder extends Order {
-  bookDetail?: Order["Book"] // Now directly from Order.Book
+  bookDetail?: Order["Book"]
   bookItem?: BookItem
+}
+
+interface CategoryFromOrders {
+  id: string
+  name_uz: string
+  name_ru: string
+  count: number // How many orders have this category
+}
+
+interface KafedraFromOrders {
+  id: string
+  name_uz: string
+  name_ru: string
+  count: number // How many orders have this kafedra
 }
 
 export default function ProfilePage() {
@@ -137,8 +153,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState({
     fullname: "",
     phone: "",
-    direction: "", // Default value
-    group: "", // Default value
+    direction: "",
+    group: "",
   })
   const [orders, setOrders] = useState<EnrichedOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -147,6 +163,9 @@ export default function ProfilePage() {
   const [currentLanguage, setCurrentLanguage] = useState(i18n.language)
   const router = useRouter()
   const [isClient, setIsClient] = useState(false)
+
+  const [categoriesFromOrders, setCategoriesFromOrders] = useState<CategoryFromOrders[]>([])
+  const [kafedrasFromOrders, setKafedrasFromOrders] = useState<KafedraFromOrders[]>([])
 
   const showNotification = (message: string) => {
     setNotification(message)
@@ -170,12 +189,11 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setIsClient(true)
-    // Load profile data from localStorage immediately when client is ready
     setProfile({
       fullname: localStorage.getItem("fullname") || "",
       phone: localStorage.getItem("phone") || "",
-      direction: "", // Default value
-      group: "", // Default value
+      direction: "",
+      group: "",
     })
     fetchData()
     setCurrentLanguage(i18n.language)
@@ -190,13 +208,10 @@ export default function ProfilePage() {
         return
       }
 
-      // Fetch orders and book items in parallel
       const [ordersData, bookItemsData] = (await Promise.all([getUserOrders(), getBookItems()])) as any
 
-      // Filter orders for current user
       const userOrders = ordersData.data.filter((order: Order) => order.user_id === userId)
 
-      // Update profile from the first order's user data, if available
       if (userOrders.length > 0 && userOrders[0].User) {
         setProfile((prev) => ({
           ...prev,
@@ -204,7 +219,6 @@ export default function ProfilePage() {
           phone: userOrders[0].User.phone || prev.phone,
         }))
       } else {
-        // If no orders, try to load from localStorage (fallback) or set to empty
         setProfile((prev) => ({
           ...prev,
           fullname: localStorage.getItem("fullname") || "",
@@ -212,16 +226,17 @@ export default function ProfilePage() {
         }))
       }
 
-      // Create enriched orders with book details from bookItems
       const enrichedOrders: EnrichedOrder[] = userOrders.map((order: Order) => {
         const bookItem = bookItemsData.data.find((item: BookItem) => item.book_id === order.book_id)
         return {
           ...order,
-          bookDetail: bookItem?.Book, // Get book details from nested Book in BookItem
-          bookItem: bookItem, // Keep the full bookItem
+          bookDetail: bookItem?.Book,
+          bookItem: bookItem,
         }
       })
       setOrders(enrichedOrders)
+
+      extractCategoriesAndKafedras(enrichedOrders)
     } catch (error) {
       console.error("Ma'lumotlarni olishda xatolik:", error)
       toast.error(t("common.errorFetchingData"))
@@ -229,6 +244,52 @@ export default function ProfilePage() {
       setLoading(false)
     }
   }
+
+ const extractCategoriesAndKafedras = (enrichedOrders: EnrichedOrder[]) => {
+  const categoryMap = new Map<string, CategoryFromOrders>()
+  const kafedraMap = new Map<string, KafedraFromOrders>()
+
+  enrichedOrders.forEach((order) => {
+    if (order.bookItem?.BookCategoryKafedras) {
+      order.bookItem.BookCategoryKafedras.forEach((item) => {
+        const { category, kafedra } = item
+
+        // Count categories
+        if (category) {
+          const existing = categoryMap.get(category.id)
+          if (existing) {
+            existing.count += 1
+          } else {
+            categoryMap.set(category.id, {
+              id: category.id,
+              name_uz: category.name_uz,
+              name_ru: category.name_ru,
+              count: 1,
+            })
+          }
+        }
+
+        // Count kafedras
+        if (kafedra) {
+          const existing = kafedraMap.get(kafedra.id)
+          if (existing) {
+            existing.count += 1
+          } else {
+            kafedraMap.set(kafedra.id, {
+              id: kafedra.id,
+              name_uz: kafedra.name_uz,
+              name_ru: kafedra.name_ru,
+              count: 1,
+            })
+          }
+        }
+      })
+    }
+  })
+
+  return { categoryMap, kafedraMap }
+}
+
 
   const handleSave = () => {
     const storedFullname = localStorage.getItem("full_name")
@@ -246,15 +307,15 @@ export default function ProfilePage() {
     if (isFullnameChanged || isPhoneChanged) {
       showNotification(t("common.infoSaved"))
     } else {
-      showNotification(t("common.nothingChanged")) // ixtiyoriy: o‘zgartirish yo‘q
+      showNotification(t("common.nothingChanged"))
     }
   }
 
   const handleLogout = () => {
     localStorage.removeItem("token")
     localStorage.removeItem("id")
-    localStorage.removeItem("full_name") // Clear full_name from localStorage
-    localStorage.removeItem("phone") // Clear phone from localStorage
+    localStorage.removeItem("full_name")
+    localStorage.removeItem("phone")
     useAuthStore.getState().clearToken()
     showNotification(t("common.loggedOut"))
     router.push("/login")
@@ -290,23 +351,21 @@ export default function ProfilePage() {
     setExpandedOrders((prev) => (prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]))
   }
 
-  // Active orders (status_id 1, 2)
   const activeOrders = orders.filter((order) => order.status_id === 1 || order.status_id === 2)
-  // Archived orders (status_id 3, 4, 5)
   const archivedOrders = orders.filter((order) => order.status_id >= 3)
 
   const getStatusColor = (statusId: number) => {
     switch (statusId) {
       case 1:
-        return "bg-[#21466D]" // Buyurtma berildi
+        return "bg-[#21466D]"
       case 2:
-        return "bg-blue-500" // Tayyorlanmoqda
+        return "bg-blue-500"
       case 3:
-        return "bg-green-500" // Kitob o'qilmoqda
+        return "bg-green-500"
       case 4:
-        return "bg-gray-400" // Topshirilgan
+        return "bg-gray-400"
       case 5:
-        return "bg-red-500" // Bekor qilingan
+        return "bg-red-500"
       default:
         return "bg-[#21466D]"
     }
@@ -335,7 +394,6 @@ export default function ProfilePage() {
         className="animate-slide-up border-[#21466D]/10 hover:border-[#21466D]/20 transition-all duration-200"
       >
         <CardContent className="p-0">
-          {/* Order Header */}
           <div className="p-4 border-b border-[#21466D]/10">
             <div className="flex justify-between items-start mb-3">
               <h3 className="text-lg font-semibold max-md:text-md text-[#21466D] dark:text-white">
@@ -372,7 +430,6 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          {/* Order Details */}
           <div className="p-4">
             <div className="grid grid-cols-1 gap-3 text-sm mb-4">
               <div className="flex items-start gap-2">
@@ -411,24 +468,25 @@ export default function ProfilePage() {
               <div className="text-sm">
                 {order.bookItem && (
                   <div className="flex flex-wrap gap-1">
-                    {order.bookItem.BookCategoryKafedras && (
-                      <>
-                        <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
-                          {
-                            order.bookItem.BookCategoryKafedras.category[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof order.bookItem.BookCategoryKafedras.category
-                            ]
-                          }
-                        </Badge>
-                        <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
-                          {
-                            order.bookItem.BookCategoryKafedras.kafedra[
-                              `name_${i18n.language.slice(0, 2)}` as keyof typeof order.bookItem.BookCategoryKafedras.kafedra
-                            ]
-                          }
-                        </Badge>
-                      </>
-                    )}
+                    {order.bookItem?.BookCategoryKafedras &&
+                                           Array.isArray(order.bookItem.BookCategoryKafedras) &&
+                                           order.bookItem.BookCategoryKafedras.length > 0 && (
+                                             <div className="flex flex-wrap gap-1 mt-2">
+                                               <Badge variant="secondary" className="text-xs bg-[#21466D]/10 text-[#21466D]">
+                                                 {order.bookItem.BookCategoryKafedras[0].category[`name_${i18n.language.slice(0, 2)}`]}
+                                               </Badge>
+                                               <Badge variant="outline" className="text-xs border-[#21466D]/20 text-[#21466D]">
+                                                 {order.bookItem.BookCategoryKafedras[0].kafedra[`name_${i18n.language.slice(0, 2)}`]}
+                                               </Badge>
+                                               {/* Show indicator if there are multiple combinations */}
+                                               {order.bookItem.BookCategoryKafedras.length > 1 && (
+                                                 <Badge variant="outline" className="text-xs border-gray-300 text-gray-500">
+                                                   +{order.bookItem.BookCategoryKafedras.length - 1}
+                                                 </Badge>
+                                               )}
+                                             </div>
+                                           )}
+
                   </div>
                 )}
               </div>
@@ -443,7 +501,6 @@ export default function ProfilePage() {
               </Button>
             </div>
           </div>
-          {/* Expanded Details */}
           {isExpanded && (
             <div className="border-t border-[#21466D]/10 bg-[#21466D]/5 p-4">
               <h4 className="font-medium mb-3 text-[#21466D] dark:text-white">{t("common.aboutBook")}:</h4>
@@ -463,7 +520,7 @@ export default function ProfilePage() {
                       <p className="font-medium text-[#21466D]">{order.bookDetail.book_count}</p>
                     </div>
                   </div>
-                  {order.bookItem?.PDFFile?.file_url && ( // Check for file_url existence
+                  {order.bookItem?.PDFFile?.file_url && (
                     <Button
                       onClick={() => window.open(order.bookItem!.PDFFile.file_url, "_blank")}
                       className="w-full bg-[#21466D] hover:bg-[#21466D]/90 text-white"
@@ -525,7 +582,6 @@ export default function ProfilePage() {
           </Card>
         )
       })}
-      {/* Mobil ko'rinish uchun chiqish tugmasi */}
       <Card className="border-red-200 hover:border-red-300 transition-all duration-200 cursor-pointer">
         <CardContent className="p-4" onClick={confirmLogout}>
           <div className="flex items-center justify-between">
@@ -585,6 +641,119 @@ export default function ProfilePage() {
             </div>
           </div>
         )
+      case "kategoriyalar":
+        return (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              {isMobile && (
+                <Button variant="ghost" size="sm" onClick={() => setMobileView("menu")} className="text-[#21466D]">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {t("common.back")}
+                </Button>
+              )}
+              <h2 className="text-2xl font-semibold text-[#21466D] dark:text-white">
+                {t("common.categories")} & {t("common.kafedras")}
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Categories Section */}
+              <Card className="border-[#21466D]/10">
+                <CardHeader className="border-b border-[#21466D]/10">
+                  <CardTitle className="text-[#21466D] dark:text-white flex items-center gap-2">
+                    <Filter className="h-5 w-5" />
+                    {t("common.categories")} ({categoriesFromOrders.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {categoriesFromOrders.length > 0 ? (
+                    <div className="space-y-3">
+                      {categoriesFromOrders.map((category) => (
+                        <div
+                          key={category.id}
+                          className="flex items-center justify-between p-3 bg-[#21466D]/5 rounded-lg"
+                        >
+                          <div>
+                            <h4 className="font-medium text-[#21466D] dark:text-white">
+                              {category[`name_${i18n.language.slice(0, 2)}` as keyof CategoryFromOrders]}
+                            </h4>
+                          </div>
+                          <Badge className="bg-[#21466D] text-white">
+                            {category.count} {t("common.books")}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Tag className="mx-auto h-12 w-12 text-[#21466D]/40 mb-4" />
+                      <p className="text-muted-foreground">{t("common.noCategoriesFound")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Kafedras Section */}
+              <Card className="border-[#21466D]/10">
+                <CardHeader className="border-b border-[#21466D]/10">
+                  <CardTitle className="text-[#21466D] dark:text-white flex items-center gap-2">
+                    <BookOpen className="h-5 w-5" />
+                    {t("common.kafedras")} ({kafedrasFromOrders.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {kafedrasFromOrders.length > 0 ? (
+                    <div className="space-y-3">
+                      {kafedrasFromOrders.map((kafedra) => (
+                        <div
+                          key={kafedra.id}
+                          className="flex items-center justify-between p-3 bg-[#21466D]/5 rounded-lg"
+                        >
+                          <div>
+                            <h4 className="font-medium text-[#21466D] dark:text-white">
+                              {kafedra[`name_${i18n.language.slice(0, 2)}` as keyof KafedraFromOrders]}
+                            </h4>
+                          </div>
+                          <Badge variant="outline" className="border-[#21466D] text-[#21466D]">
+                            {kafedra.count} {t("common.books")}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <BookOpen className="mx-auto h-12 w-12 text-[#21466D]/40 mb-4" />
+                      <p className="text-muted-foreground">{t("common.noKafedrasFound")}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Summary Statistics */}
+            <Card className="border-[#21466D]/10 mt-6">
+              <CardHeader>
+                <CardTitle className="text-[#21466D] dark:text-white">{t("common.summary")}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-[#21466D]/5 rounded-lg">
+                    <h3 className="text-2xl font-bold text-[#21466D]">{orders.length}</h3>
+                    <p className="text-sm text-muted-foreground">{t("common.totalOrders")}</p>
+                  </div>
+                  <div className="text-center p-4 bg-[#21466D]/5 rounded-lg">
+                    <h3 className="text-2xl font-bold text-[#21466D]">{categoriesFromOrders.length}</h3>
+                    <p className="text-sm text-muted-foreground">{t("common.uniqueCategories")}</p>
+                  </div>
+                  <div className="text-center p-4 bg-[#21466D]/5 rounded-lg">
+                    <h3 className="text-2xl font-bold text-[#21466D]">{kafedrasFromOrders.length}</h3>
+                    <p className="text-sm text-muted-foreground">{t("common.uniqueKafedras")}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
       case "malumotlar":
         return (
           <Card className="w-full border-[#21466D]/10">
@@ -615,7 +784,7 @@ export default function ProfilePage() {
                     {t("common.fullname")}
                   </Label>
                   <Input
-                    disabled={true} // Keep disabled as per original code
+                    disabled={true}
                     id="fullname"
                     value={profile.fullname}
                     onChange={(e) => setProfile({ ...profile, fullname: e.target.value })}
@@ -627,51 +796,44 @@ export default function ProfilePage() {
                     {t("common.phone")}
                   </Label>
                   <Input
-                    disabled={true} // Keep disabled as per original code
+                    disabled={true}
                     id="phone"
                     value={profile.phone}
                     onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                     className="border-[#21466D]/20 focus:border-[#21466D] focus:ring-[#21466D]/20"
                   />
                 </div>
-                {/* Tilni o'zgartirish bo'limi va chiqish tugmasi */}
-                  {" "}
-                  {/* Yangi grid konteyner */}
-                  <div className=" w-full">
-                    <Label htmlFor="language-select" className="text-[#21466D] dark:text-white font-medium">
-                      {t("common.language")}
-                    </Label>
-                    <Select value={currentLanguage} onValueChange={handleLanguageChange}>
-                      <SelectTrigger
-                        id="language-select"
-                        className="border-[#21466D]/20 focus:border-[#21466D] focus:ring-[#21466D]/20"
-                      >
-                        <Globe className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder={t("common.changeLanguage")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="uz">O'zbekcha</SelectItem>
-                        <SelectItem value="ru">Русский</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  {/* Chiqish tugmasi */}
-                  
+                <div className=" w-full">
+                  <Label htmlFor="language-select" className="text-[#21466D] dark:text-white font-medium">
+                    {t("common.language")}
+                  </Label>
+                  <Select value={currentLanguage} onValueChange={handleLanguageChange}>
+                    <SelectTrigger
+                      id="language-select"
+                      className="border-[#21466D]/20 focus:border-[#21466D] focus:ring-[#21466D]/20"
+                    >
+                      <Globe className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder={t("common.changeLanguage")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="uz">O'zbekcha</SelectItem>
+                      <SelectItem value="ru">Русский</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className=" flex flex-col justify-end w-full">
-                    {" "}
-                    {/* Flex va justify-end qo'shildi */}
-                    <Label htmlFor="logout-button" className="text-[#21466D] dark:text-white font-medium sr-only">
-                      {t("common.logout")}
-                    </Label>
-                    <Button
-                      id="logout-button"
-                      variant="destructive"
-                      onClick={confirmLogout}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 max-md:mt-4" // max-md:mt-4 qo'shildi
-                    >
-                      <LogOut className="h-4 w-4" /> {t("common.logoutFromSystem")}
-                    </Button>
-                  </div>
+                  <Label htmlFor="logout-button" className="text-[#21466D] dark:text-white font-medium sr-only">
+                    {t("common.logout")}
+                  </Label>
+                  <Button
+                    id="logout-button"
+                    variant="destructive"
+                    onClick={confirmLogout}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center gap-2 max-md:mt-4"
+                  >
+                    <LogOut className="h-4 w-4" /> {t("common.logoutFromSystem")}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -685,7 +847,6 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-md:mb-10">
-      {/* Desktop Header */}
       {!isMobile && (
         <div className="flex items-center justify-between mb-6 ">
           <h1 className="text-3xl font-bold text-[#21466D] dark:text-white md:hidden">
@@ -701,7 +862,6 @@ export default function ProfilePage() {
           </Button>
         </div>
       )}
-      {/* Mobile View */}
       {isMobile ? (
         <div>
           {mobileView === "menu" ? (
@@ -716,9 +876,7 @@ export default function ProfilePage() {
           )}
         </div>
       ) : (
-        /* Desktop View */
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 ">
-          {/* Sidebar */}
           <div className={`md:col-span-1  ${isMobileMenuOpen ? "block" : "hidden md:block"}`}>
             <div className="sticky top-[150px]">
               <h1 className="text-[29.9px] font-bold text-[#21466D] dark:text-white">
@@ -763,7 +921,6 @@ export default function ProfilePage() {
               </Card>
             </div>
           </div>
-          {/* Main Content */}
           <div className="md:col-span-3">{renderContent()}</div>
         </div>
       )}
